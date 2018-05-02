@@ -1,87 +1,98 @@
 const fs = require('fs');
 const puppeteer = require('puppeteer');
-var currentURL = '';
-const sites = ['runtastic', 'garmin', 'strava'];
+const sites = ['runtastic', 'garmin', 'strava', 'facebook'];
 
-function rocognizeSite() {
-  for (site in sites){
-    if (currentURL.indexOf(site) > -1) {
+async function recognizeSite(url) {
+  for (var site of sites) {
+    if (url.indexOf(site) > -1) {
       return site;
     }
   }
-  console.log("!!! url of unknown site");
+  console.log("!!! url of unknown site: " + url);
   return null;
 }
 
-function extractItems() {
-  //data,km,ritmo,durata,dislivello positivo
-  const items = [];
-
-  //strava: document.querySelectorAll('.inline-stats li')
-
-  //TODO change selectors based on url
-  // var extractedElements = document.querySelectorAll('h2.text-subtle.text-additional-info');
-  // //DATA
-  // console.log(extractedElements);
-  // items.push(extractedElements[0].innerText);
-
-  const extractedElements = document.querySelectorAll('h4.text-bold.js-text-bold.text-no-margin');
-  console.log(extractedElements);
-  items.push(extractedElements[0].innerText);
-  items.push(extractedElements[2].innerText);
-  items.push(extractedElements[1].innerText);
-  items.push(extractedElements[4].innerText);
-
-  return items;
-}
-
-async function scrapeInfiniteScrollItems(
-  page,
-  extractItems,
-  itemTargetCount,
-  scrollDelay = 1000,
-) {
-  let items = [];
-  items = await page.evaluate(extractItems);
-  return items;
-}
-
 async function scrape(url) {
-  currentURL = url;
+  const browser = await puppeteer.launch({
+    headless: false,
+    args: ['--account-consistency']
+  });
   try {
-    // Set up browser and page.
-    const browser = await puppeteer.launch({
-      headless: false,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-    });
     const page = await browser.newPage();
     page.setViewport({
       width: 1280,
       height: 926
     });
-
-    //old working url https://www.runtastic.com/en/users/6c8b62cd-297b-9f69-484f-d9e583ef5051/sport-sessions/56a69ef8-a4a6-4a15-a950-536619949c25?sharing_token=5acbc7afddc30fef8dd3b574&utm_campaign=user_generated_sharing&utm_content=session.runtastic.running&utm_medium=gplus.android&utm_source=runtastic.lite
-
-    // Navigate to the demo page.
     await page.goto(url, {
-      timeout: 120000
+      "waitUntil": "networkidle0"
     });
-    page.on('load', () => console.log("Loaded: " + page.url()));
+    // await page.waitFor(1000);
+    const siteType = await recognizeSite(url);
 
-    // Scroll and extract items from the page.
-    const items = await scrapeInfiniteScrollItems(page, extractItems, 100);
-    console.log(items);
+    const result = await page.evaluate(siteType => {
+      //data,km,ritmo,durata,dislivello positivo
+      const items = [];
+      try {
+        if (siteType == 'runtastic') {
+          //date
+          let elements = document.querySelectorAll('h2');
+          items.push(elements[1].innerText.replace(",", "."));
+          //other data
+          elements = document.querySelectorAll('h4');
+          items.push(elements[0].innerText.replace(",", "."));
+          items.push(elements[2].innerText);
+          items.push(elements[1].innerText);
+          items.push(elements[4].innerText);
+        } else if (siteType == 'garmin') {
+          //date
+          let elements = document.querySelectorAll('.page-feature div');
+          items.push(elements[0].innerText.slice(-24));
+          //other data
+          elements = document.querySelectorAll('.data-bit');
+          items.push(elements[1].innerText.replace(",", "."));
+          items.push(elements[3].innerText);
+          items.push(elements[2].innerText);
+          items.push(elements[4].innerText);
+        } else if (siteType == 'strava') {
+          //date
+          let elements = document.querySelectorAll('.timestamp');
+          items.push(elements[0].innerText.replace(",", " "));
+          //other data
+          elements = document.querySelectorAll('.inline-stats li strong');
+          items.push(elements[0].innerText);
+          items.push(elements[2].innerText);
+          items.push(elements[1].innerText);
+          //dislivello not available
+          items.push('0');
+        } else if (siteType == 'facebook') {
+          //TODO login issues
+          items.push('fb here');
+          let elements = document.querySelectorAll('#js_20');
+          for(var el of elements){
+            console.log(el.innerText);
+          }
+        }
 
-    // Save extracted items to a file.
-    // fs.writeFileSync('./items.txt', items.join('\n') + '\n');
+      } catch (error) {
+        console.log(error);
+        console.log("failed to scrape a url of type: " + siteType);
+        return 'failed';
+      }
 
-    // Close the browser.
-    await browser.close();
-    return items;
+      return items;
+    }, siteType);
+
+    browser.close();
+    return result;
   } catch (error) {
     console.error(error);
+    browser.close();
+    return '';
   }
-};
+}
 
-scrape('https://www.runtastic.com/en/users/6c8b62cd-297b-9f69-484f-d9e583ef5051/sport-sessions/56a69ef8-a4a6-4a15-a950-536619949c25?sharing_token=5acbc7afddc30fef8dd3b574&utm_campaign=user_generated_sharing&utm_content=session.runtastic.running&utm_medium=gplus.android&utm_source=runtastic.lite');
-exports.scrape = scrape;
+scrape('https://www.facebook.com/photo.php?fbid=1933392113338291&set=a.290544414289744.83087.100000025635366&type=3&theater').then((ret) => {
+  console.log(ret);
+});
+
+module.exports.scrape = scrape;
