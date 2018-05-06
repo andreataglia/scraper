@@ -30,6 +30,7 @@ async function scrape(url) {
     });;
     // await page.waitFor(1000);
     const siteType = await recognizeSite(url);
+    var result;
     if (siteType == 'facebook') {
       //TODO login issues
       // items.push('fb here');
@@ -37,8 +38,9 @@ async function scrape(url) {
       // for (var el of elements) {
       //   console.log(el.innerText);
       // }
+      result = 'fb result';
     } else {
-      const result = await page.evaluate(siteType => {
+      result = await page.evaluate(siteType => {
         //data,km,ritmo,durata,dislivello positivo
         const items = [];
         try {
@@ -84,7 +86,6 @@ async function scrape(url) {
         return items;
       }, siteType);
     }
-
 
     browser.close();
     return result;

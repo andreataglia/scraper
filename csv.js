@@ -28,7 +28,7 @@ function generateCsv(inputFile, outputFile, scrapersDelay) {
               if (err) throw err;
             });
           }).catch(e => {
-            console.log('Scraping failed: ' + e.message + ' for data: ' + data[0] + ',' + data[1]);
+            console.log('Scraper failed: ' + e.message + ' - for row: ' + data[0] + ',' + data[1]);
           });
         }, c * scrapersDelay * 1000)
       }
