@@ -1,7 +1,7 @@
 var fs = require('fs');
 var csv = require("fast-csv");
 
-function generateCsv(inputFile, outputFile) {
+function generateCsv(inputFile, outputFile, scrapersDelay) {
   var stream = fs.createReadStream(inputFile);
   var scraper = require('./scraper.js');
   let c = -1;
@@ -20,15 +20,17 @@ function generateCsv(inputFile, outputFile) {
         });
       } else {
         setTimeout(function() {
-          console.log("#" + c + " scraping started..");
-          //data[2] always cointains the url to scrape from
           const currentData = data[0] + ',' + data[1] + ',' + data[2] + ',';
+          console.log("scraping started for: " + data[0] + ',' + data[1]);
+          //data[2] always cointains the url to scrape from
           scraper.scrape(data[2]).then(function(items) {
             fs.appendFile(outputFile, currentData + items + '\n', function(err) {
               if (err) throw err;
             });
+          }).catch(e => {
+            console.log('Scraping failed: ' + e.message + ' for data: ' + data[0] + ',' + data[1]);
           });
-        }, c * 2 * 1000)
+        }, c * scrapersDelay * 1000)
       }
     })
     .on("end", function() {
