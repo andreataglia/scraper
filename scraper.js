@@ -1,6 +1,5 @@
 const fs = require('fs');
 const puppeteer = require('puppeteer');
-const URL = 'https://en.wikipedia.org/wiki/List_of_countries_and_territories_by_land_and_maritime_borders'
 
 async function scrape(url) {
   const browser = await puppeteer.launch({
@@ -12,7 +11,7 @@ async function scrape(url) {
     width: 1280,
     height: 926
   });
-  await page.goto(URL, {
+  await page.goto(url, {
     "waitUntil": "networkidle0"
   }).catch(e => {
     throw new Error(`"${e.message}"`);
@@ -48,7 +47,7 @@ async function scrape(url) {
   }, siteType);
 }
 
-scrape('https://www.facebook.com/photo.php?fbid=1933392113338291&set=a.290544414289744.83087.100000025635366&type=3&theater').then((ret) => {
+scrape('https://en.wikipedia.org/wiki/List_of_countries_and_territories_by_land_and_maritime_borders').then((ret) => {
   console.log(ret);
 });
 
