@@ -4,7 +4,7 @@
   "description": "scraper per i froci di marco e nick",
   "main": "app.js",
   "dependencies": {
-    "fast-csv": "^2.4.1",
+    "fast-csv": "^4.3.6",
     "puppeteer": "^1.2.0"
   },
   "devDependencies": {},
